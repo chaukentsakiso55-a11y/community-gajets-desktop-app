@@ -1,0 +1,39 @@
+{
+  "name": "community-gadgets-desktop",
+  "version": "0.1.0",
+  "description": "Cyber Pulse Community Gadget desktop emergency terminal",
+  "main": "main.js",
+  "author": "Cyber Pulse",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "pack:win": "electron-builder --win portable nsis"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "za.co.cyberpulse.communitygadgets.desktop",
+    "productName": "Community Gadgets",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["portable", "nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
