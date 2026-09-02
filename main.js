@@ -10,8 +10,10 @@ const DEFAULT_UDP_PORT = 45841;
 let mainWindow;
 let udpSocket;
 let relaySocket;
+let relayReconnectTimer;
 let alarmTimer;
 let settings;
+let quitting = false;
 
 function settingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
@@ -45,6 +47,41 @@ function channelIdFromCode(code) {
   return crypto.createHash('sha256')
     .update(`community-gadget-channel-v1|${code.trim()}`, 'utf8')
     .digest('base64url');
+}
+
+function deriveRelayKey(code) {
+  const normalized = String(code || '').trim();
+  if (normalized.length < 8) return null;
+  return crypto.pbkdf2Sync(
+    normalized,
+    'community-gadget-relay-encryption-v1',
+    120000,
+    32,
+    'sha256'
+  );
+}
+
+function sealRelayPayload(payload) {
+  const key = deriveRelayKey(settings.communityCode);
+  if (!key) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(payload, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString('base64url');
+}
+
+function openRelayPayload(sealed) {
+  const key = deriveRelayKey(settings.communityCode);
+  if (!key || typeof sealed !== 'string') return null;
+  const packed = Buffer.from(sealed, 'base64url');
+  if (packed.length < 29 || packed.length > 16000) return null;
+  const iv = packed.subarray(0, 12);
+  const tag = packed.subarray(12, 28);
+  const encrypted = packed.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
 }
 
 function sendToRenderer(channel, payload) {
@@ -93,10 +130,21 @@ function sendLan(payload) {
 }
 
 function closeRelay() {
+  if (relayReconnectTimer) clearTimeout(relayReconnectTimer);
+  relayReconnectTimer = null;
   if (relaySocket) {
-    try { relaySocket.close(); } catch {}
+    const socket = relaySocket;
     relaySocket = null;
+    try { socket.close(); } catch {}
   }
+}
+
+function scheduleRelayReconnect() {
+  if (quitting || relayReconnectTimer || !settings.relayUrl || !channelIdFromCode(settings.communityCode)) return;
+  relayReconnectTimer = setTimeout(() => {
+    relayReconnectTimer = null;
+    connectRelay();
+  }, 5000);
 }
 
 function connectRelay() {
@@ -109,30 +157,43 @@ function connectRelay() {
   }
 
   try {
-    relaySocket = new WebSocket(relayUrl);
-    relaySocket.on('open', () => {
-      relaySocket.send(JSON.stringify({ type: 'subscribe', channelId, terminalId: settings.terminalId }));
+    const socket = new WebSocket(relayUrl);
+    relaySocket = socket;
+    socket.on('open', () => {
+      if (relaySocket !== socket) return;
+      socket.send(JSON.stringify({ type: 'subscribe', channelId, terminalId: settings.terminalId }));
       sendToRenderer('network:status', { relay: 'online' });
     });
-    relaySocket.on('message', (data) => {
+    socket.on('message', (data) => {
+      if (relaySocket !== socket) return;
       try {
         const envelope = JSON.parse(data.toString('utf8'));
-        if (envelope.type !== 'message' || envelope.channelId !== channelId || typeof envelope.payload !== 'string') return;
-        sendToRenderer('network:message', { source: 'relay', payload: envelope.payload });
+        if (envelope.type !== 'message' || envelope.channelId !== channelId || typeof envelope.sealed !== 'string') return;
+        const payload = openRelayPayload(envelope.sealed);
+        if (!payload) return;
+        sendToRenderer('network:message', { source: 'relay', payload });
       } catch {}
     });
-    relaySocket.on('close', () => sendToRenderer('network:status', { relay: 'offline' }));
-    relaySocket.on('error', (error) => sendToRenderer('network:status', { relay: 'error', detail: error.message }));
+    socket.on('close', () => {
+      if (relaySocket === socket) relaySocket = null;
+      sendToRenderer('network:status', { relay: 'offline' });
+      scheduleRelayReconnect();
+    });
+    socket.on('error', (error) => {
+      sendToRenderer('network:status', { relay: 'error', detail: error.message });
+    });
   } catch (error) {
     sendToRenderer('network:status', { relay: 'error', detail: error.message });
+    scheduleRelayReconnect();
   }
 }
 
 function sendRelay(payload) {
   if (!relaySocket || relaySocket.readyState !== WebSocket.OPEN) return;
   const channelId = channelIdFromCode(settings.communityCode);
-  if (!channelId) return;
-  relaySocket.send(JSON.stringify({ type: 'message', channelId, terminalId: settings.terminalId, payload }));
+  const sealed = sealRelayPayload(payload);
+  if (!channelId || !sealed) return;
+  relaySocket.send(JSON.stringify({ type: 'message', channelId, terminalId: settings.terminalId, sealed }));
 }
 
 function startAlarm() {
@@ -180,6 +241,10 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('before-quit', () => {
+  quitting = true;
 });
 
 app.on('window-all-closed', () => {
