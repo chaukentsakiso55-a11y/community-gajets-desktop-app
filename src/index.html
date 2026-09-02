@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none';" />
+  <title>Community Gadgets</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <main class="shell">
+    <header class="topbar glass">
+      <div>
+        <p class="eyebrow">CYBER PULSE • COMMUNITY SAFETY NETWORK</p>
+        <h1>Community Gadgets</h1>
+        <p class="subtitle">Desktop emergency terminal</p>
+      </div>
+      <div class="status-cluster">
+        <span id="lanStatus" class="status-pill">LAN • STARTING</span>
+        <span id="relayStatus" class="status-pill">RELAY • OFF</span>
+        <button id="settingsButton" class="icon-button" aria-label="Open settings">⚙</button>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <section class="terminal-card glass">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ONE-TAP COMMUNITY SIGNAL</p>
+            <h2>What is happening?</h2>
+          </div>
+          <span id="terminalNameBadge" class="terminal-badge">Desktop terminal</span>
+        </div>
+
+        <div class="signal-grid">
+          <button class="signal secure" data-level="SECURE">
+            <span class="signal-orb"></span>
+            <strong>SECURE</strong>
+            <small>Area is safe</small>
+          </button>
+          <button class="signal monitor" data-level="MONITOR">
+            <span class="signal-orb"></span>
+            <strong>MONITOR</strong>
+            <small>Suspicious activity</small>
+          </button>
+          <button class="signal emergency" data-level="EMERGENCY">
+            <span class="signal-orb"></span>
+            <strong>EMERGENCY</strong>
+            <small>Immediate help needed</small>
+          </button>
+        </div>
+
+        <div class="privacy-strip">
+          <span>🔒</span>
+          <div>
+            <strong>Emergency-only location</strong>
+            <p>Location is requested only when the red emergency control is used.</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="active-card glass">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">LIVE INCIDENT</p>
+            <h2>Active alert</h2>
+          </div>
+          <span id="activeLevel" class="level-chip neutral">NONE</span>
+        </div>
+
+        <div id="activeEmpty" class="empty-state">
+          <div class="radar-ring"><span></span></div>
+          <strong>No active emergency selected</strong>
+          <p>Incoming alerts will appear here automatically.</p>
+        </div>
+
+        <div id="activeDetails" class="active-details hidden">
+          <div class="detail-row"><span>From</span><strong id="activeActor">—</strong></div>
+          <div class="detail-row"><span>Time</span><strong id="activeTime">—</strong></div>
+          <div class="detail-row"><span>Location</span><strong id="activeLocation">Not shared</strong></div>
+          <div class="action-grid">
+            <button id="ackButton" class="secondary-action">Acknowledge</button>
+            <button id="respondButton" class="secondary-action">I’m responding</button>
+            <button id="mapButton" class="secondary-action">Open map</button>
+            <button id="endButton" class="danger-action">End my alert</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="lower-grid">
+      <section class="glass feed-card">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">COMMUNITY FEED</p>
+            <h2>Recent activity</h2>
+          </div>
+          <button id="clearFeedButton" class="text-button">Clear view</button>
+        </div>
+        <div id="feed" class="feed"></div>
+      </section>
+
+      <aside class="glass info-card">
+        <p class="eyebrow">NETWORK RULES</p>
+        <h2>Built for privacy first</h2>
+        <ul>
+          <li>Private community code signs every trusted message.</li>
+          <li>Green and amber signals never contain coordinates.</li>
+          <li>Red alerts can include current location and accuracy.</li>
+          <li>LAN works without internet between desktop terminals.</li>
+          <li>Optional relay extends reach when internet is available.</li>
+        </ul>
+        <p class="safety-note">Prototype only. Keep normal emergency-service and community safety procedures available as a backup.</p>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog" class="settings-dialog glass">
+    <form method="dialog" id="settingsForm">
+      <div class="section-heading compact">
+        <div>
+          <p class="eyebrow">TERMINAL SETTINGS</p>
+          <h2>Connect this desktop</h2>
+        </div>
+        <button id="closeSettingsButton" value="cancel" class="icon-button" aria-label="Close settings">✕</button>
+      </div>
+
+      <label>
+        Terminal name
+        <input id="terminalNameInput" maxlength="80" placeholder="Community Hall Desktop" />
+      </label>
+      <label>
+        Private community code
+        <input id="communityCodeInput" type="password" minlength="8" autocomplete="off" placeholder="At least 8 characters" />
+        <small>Use the same private code on trusted Community Gadget devices.</small>
+      </label>
+      <label>
+        Long-range relay URL <span class="optional">optional</span>
+        <input id="relayUrlInput" placeholder="wss://your-relay.example" />
+      </label>
+      <label>
+        LAN UDP port
+        <input id="udpPortInput" type="number" min="1024" max="65535" />
+      </label>
+
+      <div id="settingsError" class="form-error hidden"></div>
+      <div class="dialog-actions">
+        <button id="saveSettingsButton" value="default" class="primary-action">Save & reconnect</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="protocol.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
