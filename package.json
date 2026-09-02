@@ -10,7 +10,7 @@
     "dev": "electron .",
     "relay": "node relay-server/server.js",
     "check": "node --check main.js && node --check preload.js && node --check src/protocol.js && node --check src/renderer.js && node --check relay-server/server.js",
-    "pack:win": "electron-builder --win portable nsis"
+    "pack:win": "electron-builder --win portable nsis --publish never"
   },
   "dependencies": {
     "ws": "^8.18.0"
