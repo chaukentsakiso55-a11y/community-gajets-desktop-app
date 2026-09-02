@@ -175,11 +175,13 @@ function connectRelay() {
       } catch {}
     });
     socket.on('close', () => {
-      if (relaySocket === socket) relaySocket = null;
+      if (relaySocket !== socket) return;
+      relaySocket = null;
       sendToRenderer('network:status', { relay: 'offline' });
       scheduleRelayReconnect();
     });
     socket.on('error', (error) => {
+      if (relaySocket !== socket) return;
       sendToRenderer('network:status', { relay: 'error', detail: error.message });
     });
   } catch (error) {
